@@ -23,7 +23,7 @@ Static HTML dashboard, split from the single-file export `Flamingo_Weather_Dashb
 
 ## Running
 
-Serve the folder over HTTP, then open `index.html`. No build step.
+Serve the folder over HTTP, then open `index.html` (for example `http://flm-c2l-apps:5000/`). No build step.
 
 ```
 python3 -m http.server 8000
@@ -34,4 +34,5 @@ Opening the file directly from disk does not work: browsers block JSON loading f
 ## Known limits
 
 - Data files are static snapshots embedded in the export. Nothing refreshes them in this repository.
-- `/api/whoami` and `/api/actioned` (Admin and Actioned tabs) and the Power BI refresh button need the original hosting environment. They fail when opened from disk.
+- There is no access control. The sign-in check and the Admin tab were removed, so anyone who can reach the site sees every tab. Restrict access at the web server or network level.
+- `/api/actioned` (Actioned tab) and the Power BI refresh button need the original hosting environment. They fail on a plain static host.

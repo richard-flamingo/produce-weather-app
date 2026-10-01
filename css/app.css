@@ -34,21 +34,6 @@ select:focus,input:focus{outline:2px solid var(--green); outline-offset:0}
 .tab{font-family:inherit; font-size:12.5px; font-weight:600; padding:8px 11px; border:none; background:none; cursor:pointer; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-2px; white-space:nowrap;}
 .tab.active{color:var(--green); border-bottom-color:var(--green)}
 
-.tab.acl-hide{display:none}
-#aclGate{position:fixed;inset:0;z-index:9999;background:var(--cream);display:flex;align-items:center;justify-content:center;font-family:Calibri,Carlito,Arial,sans-serif}
-#aclGate .box{max-width:480px;background:#fff;border:1px solid var(--line);border-top:4px solid var(--green);border-radius:10px;padding:22px 26px;color:var(--slate)}
-#aclGate h2{margin:0 0 8px;color:var(--green);font-size:18px}
-#aclGate p{margin:6px 0;font-size:14px;line-height:1.5}
-#aclGate button{margin-top:10px}
-.acl-tbl{border-collapse:collapse;font-size:13px}
-.acl-tbl th,.acl-tbl td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:center}
-.acl-tbl th{color:var(--green);font-weight:700;font-size:12px}
-.acl-tbl td.u,.acl-tbl th.u{text-align:left;white-space:nowrap}
-.acl-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}
-.acl-row input[type=text]{font-family:inherit;font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;min-width:280px}
-.acl-msg{font-size:13px}
-.acl-msg.err{color:#B3261E}.acl-msg.ok{color:var(--green)}
-.acl-lnk{background:none;border:none;color:#B3261E;cursor:pointer;font-family:inherit;font-size:12px;text-decoration:underline}
 
 .panel{display:none}
 .panel.active{display:block; flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; padding-right:6px}

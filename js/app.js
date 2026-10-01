@@ -800,7 +800,7 @@ function loadAlerts(){
   state.loaded.alerts=true;
 }
 
-function _switchTabImpl(t){
+function switchTab(t){
   state.active=t;
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===t));
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
@@ -809,7 +809,7 @@ function _switchTabImpl(t){
   document.getElementById("dateCtl").style.display=sd?"flex":"none";
   document.getElementById("dateFrom").style.display=sd?"flex":"none";
   document.getElementById("dateTo").style.display=sd?"flex":"none";
-  const ownCrop=(t==="crop"),ownPlan=(t==="cropplan"),noTop=(ownCrop||ownPlan||t==="bycountry"||t==="map"||t==="refs"||t==="actioned"||t==="about"||t==="alerts"||t==="admin");
+  const ownCrop=(t==="crop"),ownPlan=(t==="cropplan"),noTop=(ownCrop||ownPlan||t==="bycountry"||t==="map"||t==="refs"||t==="actioned"||t==="about"||t==="alerts");
   document.getElementById("topControls").style.display=noTop?"none":"flex";
   document.getElementById("hint").style.display=noTop?"none":"block";
   document.getElementById("cropControls").style.display=ownCrop?"flex":"none";
@@ -827,74 +827,8 @@ function _switchTabImpl(t){
   if(t==="refs"&&!state.loaded.refs)loadRefs();
   if(t==="accuracy"&&!state.loaded.accuracy)loadAccuracy();
   if(t==="alerts"&&!state.loaded.alerts)loadAlerts();
-  if(t==="admin"&&!state.loaded.admin)loadAdmin();
 }
 
-/* ---- Access control (server list via /api/whoami; see access_control.py) ---- */
-const ACL_TABS=[["map","Map"],["forecast","Forecast"],["historical","Historical"],["alerts","Alerts"],["crop","Crop risk"],["actioned","Actioned"],["cropplan","Issues"],["bycountry","By country"],["accuracy","Accuracy"],["refs","References"],["ask","Ask data"],["about","About"],["admin","Admin"]];
-const ACL={status:"pending",user:null,tabs:[],admin:false,want:null,local:false};
-function aclAllowed(t){return ACL.status==="ok"&&ACL.tabs.indexOf(t)>=0;}
-function switchTab(t){
-  if(ACL.status==="pending"){ACL.want=t;return;}
-  if(ACL.status!=="ok")return;
-  if(!aclAllowed(t)){t=ACL.tabs.indexOf(state.active)>=0?state.active:ACL.tabs[0];if(!t)return;}
-  _switchTabImpl(t);
-}
-function aclGate(msg,actHtml){const g=document.getElementById("aclGate");if(!g)return;g.style.display="flex";document.getElementById("aclGateMsg").textContent=msg;document.getElementById("aclGateAct").innerHTML=actHtml||"";}
-function aclApply(){
-  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("acl-hide",!aclAllowed(b.dataset.tab)));
-  const g=document.getElementById("aclGate");if(g)g.style.display="none";
-  const w=ACL.want;ACL.want=null;switchTab(w&&aclAllowed(w)?w:(aclAllowed("map")?"map":ACL.tabs[0]));
-}
-function aclIsLocal(){return location.protocol==="file:"||!!window.cowork;}
-function aclCheck(){
-  fetch("/api/whoami",{cache:"no-store",credentials:"same-origin"}).then(r=>r.json().then(j=>({ok:r.ok,j:j}))).then(({ok,j})=>{
-    if(ok&&j&&Array.isArray(j.tabs)&&j.tabs.length){ACL.status="ok";ACL.user=j.user;ACL.tabs=ACL_TABS.map(x=>x[0]).filter(t=>j.tabs.indexOf(t)>=0);ACL.admin=!!j.admin;aclApply();}
-    else{ACL.status="denied";aclGate("You don’t have access to this dashboard"+(j&&j.user?" ("+j.user+")":"")+". Contact Group IT to request it.");}
-  }).catch(()=>{
-    if(aclIsLocal()){
-      ACL.status="offline";
-      aclGate("Access can’t be checked because this copy isn’t being served by the dashboard server. User access is only enforced on the hosted version.",'<button class="applybtn" type="button" id="aclLocalBtn">Open local copy</button>');
-      document.getElementById("aclLocalBtn").onclick=function(){ACL.status="ok";ACL.local=true;ACL.user="local copy";ACL.tabs=ACL_TABS.map(x=>x[0]).filter(t=>t!=="admin");aclApply();};
-    } else {ACL.status="error";aclGate("Access can’t be checked right now. Try again shortly, or contact Group IT if it keeps happening.",'<button class="applybtn" type="button" onclick="location.reload()">Try again</button>');}
-  });
-}
-let ACLDATA=null;
-function aclMsg(id,txt,kind){const el=document.getElementById(id);if(el){el.textContent=txt||"";el.className="acl-msg"+(kind?" "+kind:"");}}
-function loadAdmin(){
-  state.loaded.admin=true;
-  if(!ACL.admin){document.getElementById("aclTbl").innerHTML="";aclMsg("aclSaveMsg","Admin access is needed to manage users.","err");return;}
-  aclMsg("aclSaveMsg","Loading…");
-  fetch("/api/access",{cache:"no-store",credentials:"same-origin"}).then(r=>{if(!r.ok)throw r.status;return r.json();}).then(j=>{ACLDATA={users:j.users||{}};aclMsg("aclSaveMsg","");
-    document.getElementById("aclMeta").textContent=j.updatedBy?("Last changed by "+j.updatedBy+" on "+fmtDate(String(j.updatedAt).slice(0,10))+" at "+String(j.updatedAt).slice(11,16)+"."):"";aclRender();})
-  .catch(()=>{state.loaded.admin=false;aclMsg("aclSaveMsg","Couldn’t load the access list. Check the dashboard server is running.","err");});
-}
-function aclRender(){
-  const tbl=document.getElementById("aclTbl");const users=Object.keys(ACLDATA.users).sort();
-  let h='<thead><tr><th class="u">User</th>'+ACL_TABS.map(x=>"<th>"+escH(x[1])+"</th>").join("")+"<th></th></tr></thead><tbody>";
-  users.forEach(u=>{const me=(u===ACL.user);const tabs=ACLDATA.users[u].tabs||[];
-    h+='<tr><td class="u">'+escH(u)+(me?" (you)":"")+"</td>"+ACL_TABS.map(x=>{const lock=me&&x[0]==="admin";return '<td><input type="checkbox" class="aclchk" data-u="'+escH(u)+'" data-t="'+x[0]+'"'+(tabs.indexOf(x[0])>=0?" checked":"")+(lock?' disabled title="You can’t remove your own admin access"':"")+' aria-label="'+escH(u)+" – "+escH(x[1])+'"></td>';}).join("")
-     +"<td>"+(me?"":'<button type="button" class="acl-lnk" data-rm="'+escH(u)+'">Remove</button>')+"</td></tr>";});
-  tbl.innerHTML=h+"</tbody>";
-  tbl.querySelectorAll(".aclchk").forEach(c=>c.addEventListener("change",()=>{const r=ACLDATA.users[c.dataset.u];const s=new Set(r.tabs||[]);c.checked?s.add(c.dataset.t):s.delete(c.dataset.t);r.tabs=ACL_TABS.map(x=>x[0]).filter(t=>s.has(t));aclMsg("aclSaveMsg","Unsaved changes.");}));
-  tbl.querySelectorAll("[data-rm]").forEach(b=>b.addEventListener("click",()=>{delete ACLDATA.users[b.dataset.rm];aclRender();aclMsg("aclSaveMsg","Unsaved changes.");}));
-}
-function aclAdd(){
-  const inp=document.getElementById("aclNewUser");const u=(inp.value||"").trim().toLowerCase();
-  if(!u||!/^[^\s<>"']{3,254}$/.test(u)){aclMsg("aclAddMsg","Enter a sign-in name, for example name@flamingo.net.","err");return;}
-  if(ACLDATA.users[u]){aclMsg("aclAddMsg","That user is already on the list.","err");return;}
-  ACLDATA.users[u]={tabs:ACL_TABS.map(x=>x[0]).filter(t=>t!=="admin")};inp.value="";aclMsg("aclAddMsg","Added with all tabs except Admin. Adjust, then save.","ok");aclRender();aclMsg("aclSaveMsg","Unsaved changes.");
-}
-function aclSave(){
-  const empty=Object.keys(ACLDATA.users).filter(u=>!(ACLDATA.users[u].tabs||[]).length);
-  if(empty.length){aclMsg("aclSaveMsg",empty.join(", ")+" has no tabs ticked. Tick at least one, or remove the user.","err");return;}
-  aclMsg("aclSaveMsg","Saving…");
-  fetch("/api/access",{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({users:ACLDATA.users})})
-  .then(r=>r.json().then(j=>({ok:r.ok,j:j}))).then(({ok,j})=>{if(!ok)throw (j&&j.error)||"save failed";aclMsg("aclSaveMsg","Saved.","ok");state.loaded.admin=false;loadAdmin();setTimeout(()=>aclMsg("aclSaveMsg","Saved.","ok"),300);})
-  .catch(e=>aclMsg("aclSaveMsg","Couldn’t save: "+e,"err"));
-}
-document.addEventListener("click",e=>{if(e.target&&e.target.id==="aclAddBtn")aclAdd();else if(e.target&&e.target.id==="aclSaveBtn")aclSave();});
-document.addEventListener("keydown",e=>{if(e.target&&e.target.id==="aclNewUser"&&e.key==="Enter")aclAdd();});
 function updateHeaderMeta(){
   document.getElementById("asOf").textContent="Snapshot "+fmtDate(META.generated);
   document.getElementById("foot").innerHTML="Source: Power BI semantic model &ldquo;Flamingo Weather&rdquo; &middot; Snapshot as at "+fmtDate(META.generated)+" &middot; "+intf(META.n_obs)+" observations, "+intf(META.n_fc)+" forecast rows, "+META.n_loc+" sites &middot; Confidential &ndash; internal use only.";
@@ -1027,4 +961,3 @@ function init(){
   whenReady(()=>switchTab("map"));
 }
 init();
-aclCheck();
